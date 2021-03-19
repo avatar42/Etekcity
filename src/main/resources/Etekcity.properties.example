@@ -1,0 +1,5 @@
+## Talk to Etekcity plugs via cloud service
+##username for Vesync (etekcity)
+login=email@domain.tld
+##MD5 encoded password for Vesync (etekcity)
+password=123456789abcdef0123456789abcdef0
