@@ -121,7 +121,7 @@
 						<configuration>
 							<tasks>
 								<delete file="B:/exp/Vesync.jar" />
-								<copy file="${project.build.directory}/Vesync.jar"
+								<copy file="${project.build.directory}/Vesync-${version}.jar"
 									tofile="B:/exp/Vesync.jar" />
 							</tasks>
 						</configuration>

@@ -135,20 +135,9 @@ public class Vesync {
 		params.put("password", password);
 		String s = null;
 
-//		String url = BASE_URL + LOGIN_SUB_URL;
-//		// get session
-//		s = postReq(params, url);
-
 		try {
 			URL url = new URL(BASE_URL + LOGIN_SUB_URL);
 			s = sendReq(params, url, "POST");
-////{'tk':self._account["tk"],'accountid':self._account["accountID"]}
-//			StringBuilder sb = new StringBuilder();
-//			for (byte b : s.getBytes()) {
-//				sb.append(String.format("%02x", b));
-//			}
-//			String responseStr = sb.toString();
-//			log.info("responseStr:" + responseStr);
 
 			// sent response to auth request
 			JSONObject resp = JSONObject.fromObject(s);
@@ -718,7 +707,7 @@ public class Vesync {
 		System.err.println("-h print this help");
 		System.err.println("-on send turn on");
 		System.err.println("-off send turn of");
-		System.err.println("-reset send turn off pause then send turn on");
+		System.err.println("-reset send turn off pause "+pauseSecs+" seconds then send turn on");
 		System.exit(1);
 	}
 
