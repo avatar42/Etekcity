@@ -44,7 +44,8 @@
 			<groupId>net.sf.json-lib</groupId>
 			<artifactId>json-lib</artifactId>
 			<version>2.4</version>
-			<classifier>jdk15</classifier> <!-- classifier required for this one -->
+			<classifier>jdk15</classifier>
+			<!-- classifier required for this one -->
 		</dependency>
 
 		<!-- test dependencies -->
@@ -59,6 +60,7 @@
 	<build>
 		<plugins>
 			<plugin>
+				<!-- builds jar with just this project's code -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>2.4</version>
@@ -69,9 +71,13 @@
 							<mainClass>com.dea42.iot.Vesync</mainClass>
 						</manifest>
 					</archive>
+					<excludes>
+						<!-- Excluding so I do not stick my info in /Releases/ and accidentally 
+							check in -->
+						<exclude>**/Etekcity.properties*</exclude>
+					</excludes>
 				</configuration>
 			</plugin>
-
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
@@ -83,23 +89,37 @@
 							<goal>copy-dependencies</goal>
 						</goals>
 						<configuration>
+							<outputDirectory>${project.build.directory}/dependency-jars/</outputDirectory>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 			<plugin>
+				<!-- builds jar with all the dependencies added in -->
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
+				<!--
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
-					<finalName>SntpTest</finalName>
+					-->
+                <descriptors>
+                    <descriptor>src/assembly/jar-with-deps-with-exclude.xml</descriptor> 
+                </descriptors>
+					<finalName>Vesync-full-${project.version}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<archive>
 						<manifest>
 							<mainClass>com.dea42.iot.Vesync</mainClass>
 						</manifest>
+                    <manifestEntries>
+                        <Class-Path>.</Class-Path>
+                    </manifestEntries>
 					</archive>
+					<excludes>
+						<!-- Excluding so I do not stick my info in /Releases/ -->
+						<exclude>**/Etekcity.properties*</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>
@@ -120,9 +140,12 @@
 						</goals>
 						<configuration>
 							<tasks>
-								<delete file="B:/exp/Vesync.jar" />
-								<copy file="${project.build.directory}/Vesync-${version}.jar"
-									tofile="B:/exp/Vesync.jar" />
+								<copy
+									file="${project.build.directory}/Vesync-full-${project.version}.jar"
+									tofile="${project.build.directory}/../Releases/Vesync-full-${project.version}.jar" />
+								<copy
+									file="${project.build.directory}/Vesync-${project.version}.jar"
+									tofile="${project.build.directory}/../Releases/Vesync-${project.version}.jar" />
 							</tasks>
 						</configuration>
 					</execution>

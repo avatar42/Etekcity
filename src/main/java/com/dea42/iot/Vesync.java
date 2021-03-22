@@ -65,6 +65,21 @@ public class Vesync {
 	private final Logger log = LoggerFactory.getLogger(getClass());
 	private static final String BASE_URL = "https://smartapi.vesync.com";
 	private static final String LOGIN_SUB_URL = "/vold/user/login";
+
+	/**
+	 * @param login the login to set
+	 */
+	public void setLogin(String login) {
+		this.login = login;
+	}
+
+	/**
+	 * @param password the password to set
+	 */
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
 	private static final String GETDEVICES_SUB_URL = "/vold/user/devices";
 	private static final String DEVICE_SUB_URL = "/v1/device/";
 	private static final String COMMAND_SUB_URL = "/v1/wifi-switch-1.3/";
@@ -111,9 +126,13 @@ public class Vesync {
 	}
 
 	private void loadBundle() {
-		bundle = ResourceBundle.getBundle(BUNDLENAME);
-		login = bundle.getString("login");
-		password = bundle.getString("password");
+		try {
+			bundle = ResourceBundle.getBundle(BUNDLENAME);
+			login = bundle.getString("login");
+			password = bundle.getString("password");
+		} catch (Exception e) {
+			log.warn(BUNDLENAME + ".properties not found. login and password need to be passed on the command line");
+		}
 	}
 
 	/**
@@ -700,14 +719,17 @@ public class Vesync {
 	}
 
 	public void usage() {
-		System.err.println("USAGE:" + getClass().getSimpleName() + " [deviceName] [option]");
+		System.err.println("USAGE:" + getClass().getSimpleName() + " [deviceName] [option] [-l login] [-p password]");
 		System.err.println("with no arguments reads device info from site and saves to " + DEVICE_JSON);
 		System.err.println("deviceName is the name from the app");
 		System.err.println("option is one of");
 		System.err.println("-h print this help");
+		System.err.println("-l login");
+		System.err.println("-p password");
+		System.err.println("if -l or -p is used they override and replace what is in the Etekcity.properties file");
 		System.err.println("-on send turn on");
 		System.err.println("-off send turn of");
-		System.err.println("-reset send turn off pause "+pauseSecs+" seconds then send turn on");
+		System.err.println("-reset send turn off, pause " + pauseSecs + " seconds, then send turn on");
 		System.exit(1);
 	}
 
@@ -716,64 +738,116 @@ public class Vesync {
 	 */
 	public static void main(String[] args) {
 		Vesync v = new Vesync();
-		String deviceName = null;
-		String action = "";
-		if (args != null && args.length > 0) {
-			for (int i = 0; i < args.length; i++) {
-				if (args[i].startsWith("-")) {
-					switch (args[i]) {
-					case "-h":
-						v.usage();
-						break;
+		try {
+			String deviceName = null;
+			String action = "";
+			boolean updateProps = false;
+			if (args != null && args.length > 0) {
+				for (int i = 0; i < args.length; i++) {
+					if (args[i].startsWith("-")) {
+						switch (args[i]) {
+						case "-h":
+							v.usage();
+							break;
 
-					case "-on":
-						action = args[i];
-						break;
+						case "-l":
+							v.setLogin(args[++i]);
+							updateProps = true;
+							break;
 
-					case "-off":
-						v.usage();
-						break;
+						case "-p":
+							MessageDigest md = MessageDigest.getInstance("MD5");
+							byte[] arr = args[++i].getBytes();
+							arr = md.digest(arr);
+							StringBuilder sb = new StringBuilder();
+							for (byte b : arr) {
+								sb.append(String.format("%02x", b));
+							}
+							v.setPassword(sb.toString());
+							updateProps = true;
+							break;
 
-					case "-reset":
-						action = args[i];
-						break;
+						case "-on":
+							action = args[i];
+							break;
 
-					default:
-						System.err.println(args[i] + " is invalid");
-						v.usage();
-						break;
+						case "-off":
+							v.usage();
+							break;
+
+						case "-reset":
+							action = args[i];
+							break;
+
+						default:
+							System.err.println(args[i] + " is invalid");
+							v.usage();
+							break;
+						}
+
+					} else {
+						deviceName = args[i];
 					}
-
-				} else {
-					deviceName = args[i];
 				}
 			}
-		}
 
-		switch (action) {
-		case "-on":
-			v.sendOn(deviceName);
-			break;
-
-		case "-off":
-			v.sendOff(deviceName);
-			break;
-
-		case "-reset":
-			v.sendOff(deviceName);
-			try {
-				Thread.sleep(v.getPauseSecs() * 1000);
-			} catch (InterruptedException e) {
-				// to keep compiler happy
-				e.printStackTrace();
+			if (updateProps) {
+				StringBuilder sb = new StringBuilder("## Talk to Etekcity plugs via cloud service");
+				sb.append(System.lineSeparator()).append("##username for Vesync (etekcity)");
+				sb.append(System.lineSeparator()).append("login=").append(v.getLogin());
+				sb.append(System.lineSeparator()).append("##MD5 encoded password for Vesync (etekcity)");
+				sb.append(System.lineSeparator()).append("password=").append(v.getPassword());
+				try (FileWriter writer = new FileWriter(BUNDLENAME + ".properties", false)) {
+					writer.write(sb.toString());
+				} catch (IOException e) {
+					System.err.println("Saving " + BUNDLENAME + ".properties failed");
+					v.usage();
+				}
+				File f = new File(BUNDLENAME + ".properties");
+				System.out.println("login and encrypted password saved to:" + f.getAbsolutePath());
 			}
-			v.sendOn(deviceName);
-			break;
+			switch (action) {
+			case "-on":
+				v.sendOn(deviceName);
+				break;
 
-		default:
-			v.loadDeviceMap(deviceName);
-			break;
+			case "-off":
+				v.sendOff(deviceName);
+				break;
+
+			case "-reset":
+				v.sendOff(deviceName);
+				try {
+					Thread.sleep(v.getPauseSecs() * 1000);
+				} catch (InterruptedException e) {
+					// to keep compiler happy
+					e.printStackTrace();
+				}
+				v.sendOn(deviceName);
+				break;
+
+			default:
+				v.loadDeviceMap(deviceName);
+				break;
+			}
+		} catch (NoSuchAlgorithmException e) {
+			System.err.println("Failed to encode password");
+			v.usage();
 		}
+	}
+
+	/**
+	 * @return the login
+	 */
+	public String getLogin() {
+		return login;
+	}
+
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return password;
 	}
 
 	/**
