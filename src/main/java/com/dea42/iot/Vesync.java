@@ -43,7 +43,6 @@ import javax.net.ssl.X509TrustManager;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
-import org.omg.CORBA.BAD_PARAM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -247,6 +246,7 @@ public class Vesync {
 	 * @throws CertificateException
 	 * @throws IOException
 	 */
+	@SuppressWarnings("deprecation")
 	private void tryTlsPlusCertInstall(HttpURLConnection con, URL url, Exception e) throws KeyManagementException,
 			KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
 		if (url.getProtocol().equals("https") && keyFile != null) {
@@ -311,6 +311,7 @@ public class Vesync {
 					MessageDigest md5 = MessageDigest.getInstance("MD5");
 					for (int i = 0; i < chain.length; i++) {
 						X509Certificate cert = chain[i];
+						// OpenJDK Deprecated(since="16")
 						log.info(" " + (i + 1) + " Subject " + cert.getSubjectDN());
 						log.info("   Issuer  " + cert.getIssuerDN());
 						sha1.update(cert.getEncoded());
@@ -354,7 +355,7 @@ public class Vesync {
 	 * @param defaultVal value to return if key not found.
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "removal" })
 	private <T> T getFirstHeader(Class<T> asClass, Map<String, List<String>> headers, String key, Object defaultVal) {
 		List<String> lms = headers.get(key);
 		if (lms != null && !lms.isEmpty()) {
@@ -363,6 +364,7 @@ public class Vesync {
 					return (T) parseDate(lms.get(0));
 
 				if (Integer.class.isAssignableFrom(asClass))
+					// OpenJDK Deprecated(since="9", forRemoval = true)
 					return (T) new Integer(lms.get(0));
 
 				if (String.class.isAssignableFrom(asClass))
@@ -438,7 +440,8 @@ public class Vesync {
 		loadDeviceMap(deviceName);
 		String cid = deviceMap.get(deviceName);
 		if (StringUtils.isBlank(cid)) {
-			throw new BAD_PARAM(deviceName + " is not a known device name. Should be one of:" + deviceMap.keySet());
+			throw new IllegalArgumentException(
+					deviceName + " is not a known device name. Should be one of:" + deviceMap.keySet());
 		}
 		return cid;
 	}
